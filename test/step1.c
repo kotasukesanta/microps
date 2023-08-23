@@ -21,4 +21,37 @@ on_signal(int s)
 int
 main(int argc, char *argv[])
 {
+    struct net_device *dev;
+
+    // シグナルハンドラを設定します。
+    signal(SIGINT, on_signal);
+    // プロトコルスタックを初期化します。
+    if (net_init() == -1) {
+        errorf("net_init() failure");
+        return -1;
+    }
+    // ダミーデバイスを作成・登録します。
+    dev = dummy_init();
+    if (!dev) {
+        errorf("dummy_init() failure");
+        return -1;
+    }
+    // プロトコルスタックを起動します。
+    if (net_run() == -1) {
+        errorf("net_run() failure");
+        return -1;
+    }
+    // キーボードからの割り込みシグナルを受信するまで繰り返します。
+    while (!terminate) {
+        // ダミーデバイスを利用してテストデータを送信します。
+        if (net_device_output(dev, 0x0800, test_data, sizeof(test_data), NULL) == -1) {
+            errorf("net_device_output() failure");
+            break;
+        }
+        // 1秒スリープします。
+        sleep(1);
+    }
+    // プロトコルスタックを停止します。
+    net_shutdown();
+    return 0;
 }
