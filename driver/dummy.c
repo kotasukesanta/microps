@@ -2,10 +2,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "platform.h"
+
 #include "util.h"
 #include "net.h"
 
 #define DUMMY_MTU UINT16_MAX /* maximum size of IP datagram */
+
+#define DUMMY_IRQ INTR_IRQ_BASE
 
 // ダミーデバイスのデータ送信関数
 static int
@@ -15,6 +19,11 @@ dummy_transmit(struct net_device *dev, uint16_t type, const uint8_t *data, size_
     debugdump(data, len);
     /* drop data */
     return 0;
+}
+
+static int
+dummy_isr(unsigned int irq, void *id)
+{
 }
 
 // ダミーデバイス操作構造体
