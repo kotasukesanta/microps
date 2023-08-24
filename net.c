@@ -113,6 +113,12 @@ net_run(void)
 {
     struct net_device *dev;
 
+    // 割り込み機構を起動します。
+    if (intr_run() == -1) {
+        errorf("intr_run() failure");
+        return -1;
+    }
+    
     // リストに登録されたネットワークデバイスをオープン（UP）します。
     debugf("open all devices...");
     for (dev = devices; dev; dev = dev->next) {
@@ -133,6 +139,8 @@ net_shutdown(void)
     for (dev = devices; dev; dev = dev->next) {
         net_device_close(dev);
     }
+    // 割り込み機構を停止します。
+    intr_shutdown();
     debugf("shutting down");
 }
 
@@ -140,6 +148,11 @@ net_shutdown(void)
 int
 net_init(void)
 {
+    // 割り込み機構を初期化します。
+    if (intr_init() == -1) {
+        errorf("intr_init() failure");
+        return -1;
+    }
     infof("initialized");
     return 0;
 }

@@ -18,12 +18,17 @@ dummy_transmit(struct net_device *dev, uint16_t type, const uint8_t *data, size_
     debugf("dev=%s, type=0x%04x, len=%zu", dev->name, type, len);
     debugdump(data, len);
     /* drop data */
+    // 割り込み処理スレッドにシグナルを送信します。
+    intr_raise_irq(DUMMY_IRQ);
     return 0;
 }
 
+// ダミーデバイスの割り込みハンドラ
 static int
 dummy_isr(unsigned int irq, void *id)
 {
+    debugf("irq=%u, dev=%s", irq, ((struct net_device *)id)->name);
+    return 0;
 }
 
 // ダミーデバイス操作構造体
@@ -52,6 +57,8 @@ dummy_init(void)
         errorf("net_device_register() failure");
         return NULL;
     }
+    // 割り込み要求をリストに登録します。
+    intr_request_irq(DUMMY_IRQ, dummy_isr, INTR_IRQ_SHARED, dev->name, dev);
     debugf("initialized, dev=%s", dev->name);
     return dev;
 }
