@@ -29,6 +29,11 @@
 // ネットワークデバイスの状態（オープン・クローズ）取得
 #define NET_DEVICE_STATE(x) (NET_DEVICE_IS_UP(x) ? "up" : "down")
 
+/* NOTE: use same value as the Ethernet types */
+#define NET_PROTOCOL_TYPE_IP   0x0800
+#define NET_PROTOCOL_TYPE_ARP  0x0806
+#define NTT_PROTOCOL_TYPE_IPV6 0x86dd
+
 // ネットワークデバイス構造体
 struct net_device {
     // 次のネットワークデバイスへのポインタ
@@ -78,6 +83,9 @@ net_device_register(struct net_device *dev);
 // ネットワークデバイスを利用してデータを送信します。
 extern int
 net_device_output(struct net_device *dev, uint16_t type, const uint8_t *data, size_t len, const void *dst);
+
+extern int
+net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, size_t len, struct net_device *dev));
 
 // ネットワークデバイスからデータを受領します。
 extern int
