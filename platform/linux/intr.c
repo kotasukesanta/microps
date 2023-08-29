@@ -91,6 +91,10 @@ intr_thread(void *arg)
         case SIGHUP:
             terminate = 1;
             break;
+        case SIGUSR1:
+            // ソフトウェア割り込みハンドラを呼び出します。
+            net_softirq_handler();
+            break;
         default:
             // 割り込み要求リストを走査し、割り込み番号が一致する割り込み要求があれば
             // その割り込みハンドラを呼び出す。
@@ -148,5 +152,6 @@ intr_init(void)
     pthread_barrier_init(&barrier, NULL, 2);
     sigemptyset(&sigmask);
     sigaddset(&sigmask, SIGHUP);
+    sigaddset(&sigmask, SIGUSR1);
     return 0;
 }
