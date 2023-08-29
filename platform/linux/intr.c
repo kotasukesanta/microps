@@ -6,6 +6,7 @@
 #include "platform.h"
 
 #include "util.h"
+#include "net.h"
 
 // 割り込み要求構造体
 struct irq_entry {

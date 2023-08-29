@@ -172,6 +172,11 @@ net_input_handler(uint16_t type, const uint8_t *data, size_t len, struct net_dev
     return 0;
 }
 
+int
+net_softirq_handler(void)
+{
+}
+
 // プロトコルスタックを起動します。
 int
 net_run(void)

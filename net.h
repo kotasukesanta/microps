@@ -90,6 +90,8 @@ net_protocol_register(uint16_t type, void (*handler)(const uint8_t *data, size_t
 // ネットワークデバイスからデータを受領します。
 extern int
 net_input_handler(uint16_t type, const uint8_t *data, size_t len, struct net_device *dev);
+extern int
+net_softirq_handler(void);
 
 // プロトコルスタックを起動します。
 extern int
