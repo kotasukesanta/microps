@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include "platform.h"
+
 #include "util.h"
 #include "net.h"
 #include "ip.h"
@@ -24,6 +26,9 @@ struct ip_hdr {
 
 const ip_addr_t IP_ADDR_ANY       = 0x00000000; /* 0.0.0.0 */
 const ip_addr_t IP_ADDR_BROADCAST = 0xffffffff; /* 255.255.255.255 */
+
+/* NOTE: if you want to add/delete the entries after net_run(), you need to protect these lists with a mutex. */
+static struct ip_iface *ifaces;
 
 // IPアドレス（文字列）をネットワークバイトオーダーのバイナリ値に変換
 int
@@ -92,6 +97,22 @@ ip_dump(const uint8_t *data, size_t len)
     hexdump(stderr, data, len);
 #endif
     funlockfile(stderr);
+}
+
+struct ip_iface *
+ip_iface_alloc(const char *unicast, const char *netmask)
+{
+}
+
+/* NOTE: must not be call after net_run() */
+int
+ip_iface_register(struct net_device *dev, struct ip_iface *iface)
+{
+}
+
+struct ip_iface *
+ip_iface_select(ip_addr_t addr)
+{
 }
 
 // プロトコルの受信キューからデータを受領します。
