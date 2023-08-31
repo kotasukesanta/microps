@@ -26,11 +26,18 @@ struct ip_hdr {
     uint8_t options[];  // Options(nbit) + Padding(n%32bit) フレキシブル配列メンバ
 };
 
+struct ip_protocol {
+    struct ip_protocol *next;
+    uint8_t type;
+    void (*handler)(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct ip_iface *iface);
+};
+
 const ip_addr_t IP_ADDR_ANY       = 0x00000000; /* 0.0.0.0 */
 const ip_addr_t IP_ADDR_BROADCAST = 0xffffffff; /* 255.255.255.255 */
 
 /* NOTE: if you want to add/delete the entries after net_run(), you need to protect these lists with a mutex. */
 static struct ip_iface *ifaces;
+static struct ip_protocol *protocols;
 
 // IPアドレス（文字列）をネットワークバイトオーダーのバイナリ値に変換
 int
@@ -169,6 +176,11 @@ ip_iface_select(ip_addr_t addr)
         }
     }
     return NULL;
+}
+
+int
+ip_protocol_register(uint8_t type, void (*handler)(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct ip_iface *iface))
+{
 }
 
 // プロトコルの受信キューからデータを受領します。

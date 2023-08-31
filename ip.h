@@ -18,6 +18,11 @@
 #define IP_ADDR_LEN 4
 #define IP_ADDR_STR_LEN 16 /* "ddd.ddd.ddd.ddd\0" */
 
+/* see https://www.iana.org/assignments/protocol-numbers/protocol-numbers.txt */
+#define IP_PROTOCOL_ICMP  1
+#define IP_PROTOCOL_TCP   6
+#define IP_PROTOCOL_UDP  17
+
 typedef uint32_t ip_addr_t;
 
 // IPインタフェース構造体
