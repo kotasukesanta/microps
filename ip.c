@@ -26,6 +26,7 @@ struct ip_hdr {
     uint8_t options[];  // Options(nbit) + Padding(n%32bit) フレキシブル配列メンバ
 };
 
+// プロトコル構造体（IPの上位プロトコルを管理）
 struct ip_protocol {
     struct ip_protocol *next;
     uint8_t type;
@@ -178,9 +179,34 @@ ip_iface_select(ip_addr_t addr)
     return NULL;
 }
 
+// プロトコルをリストに登録します。
 int
 ip_protocol_register(uint8_t type, void (*handler)(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct ip_iface *iface))
 {
+    struct ip_protocol *entry;
+
+    // Exercise 9-1: 重複登録の確認
+    for (entry = protocols; entry; entry = entry->next) {
+        if (type == entry->type) {
+            errorf("already registered, type=%u", type);
+            return -1;
+        }
+    }
+    // Exercise 9-2: プロトコルの登録
+    // (1) 新しいプロトコルのエントリ用にメモリを確保
+    entry = memory_alloc(sizeof(*entry));
+    if (!entry) {
+        errorf("memory_alloc() failure");
+        return -1;
+    }
+    // (2) 新しいプロトコルのエントリに値を設定
+    entry->next = protocols;
+    entry->type = type;
+    entry->handler = handler;
+    // (3) プロトコルリスト（protocols）の先頭に挿入
+    protocols = entry;
+    infof("registered, type=%u", entry->type);
+    return 0;    
 }
 
 // プロトコルの受信キューからデータを受領します。
@@ -239,6 +265,15 @@ ip_input(const uint8_t *data, size_t len, struct net_device *dev)
     debugf("dev=%s, iface=%s, protocol=%u, total=%u",
         dev->name, ip_addr_ntop(iface->unicast, addr, sizeof(addr)), hdr->protocol, total);
     ip_dump(data, total);
+    // Exercise 9-3: プロトコルの検索
+    struct ip_protocol *ip_proto;
+    for (ip_proto = protocols; ip_proto; ip_proto = ip_proto->next) {
+        if (hdr->protocol == ip_proto->type) {
+            ip_proto->handler(((uint8_t *)hdr) + hlen, total - hlen, hdr->src, hdr->dst, iface);
+            return;
+        }
+    }
+    /* unsupported protocol */
 }
 
 // IPデータグラムをデバイスから送信します。

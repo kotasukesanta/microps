@@ -286,6 +286,11 @@ net_init(void)
         errorf("ip_init() failure");
         return -1;
     }
+    // Exercise 9-5: ICMPの初期化関数を呼び出す
+    if (icmp_init() == -1) {
+        errorf("icmp_init() failure");
+        return -1;
+    }
     infof("initialized");
     return 0;
 }
