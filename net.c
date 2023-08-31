@@ -98,14 +98,39 @@ net_device_close(struct net_device *dev)
 }
 
 /* NOTE: must not be call after net_run() */
+// インタフェースをネットワークデバイスに登録します。
 int
 net_device_add_iface(struct net_device *dev, struct net_iface *iface)
 {
+    struct net_iface *entry;
+
+    for (entry = dev->ifaces; entry; entry = entry->next) {
+        if (entry->family == iface->family) {
+            /* NOTE: For simplicity, only one iface can be added per family. */
+            errorf("already exists, dev=%s, family=%d", dev->name, entry->family);
+            return -1;
+        }
+    }
+    iface->dev = dev;
+    // Exercise 7-1: デバイスのインタフェースリストの先頭にifaceを挿入
+    iface->next = dev->ifaces;
+    dev->ifaces = iface;
+    return 0;
 }
 
+// ネットワークデバイスに紐付くインタフェースの内、ファミリ（インタフェース種別）が一致するものを取得します。
 struct net_iface *
 net_device_get_iface(struct net_device *dev, int family)
 {
+    // Exercise 7-2: デバイスに紐づくインタフェースを検索
+    struct net_iface *entry;
+
+    for (entry = dev->ifaces; entry; entry = entry->next) {
+        if (entry->family == family) {
+            return entry;
+        }
+    }
+    return NULL;
 }
 
 // ネットワークデバイスを利用してデータを送信します。

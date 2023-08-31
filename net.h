@@ -80,6 +80,7 @@ struct net_device_ops {
     int (*transmit)(struct net_device *dev, uint16_t type, const uint8_t *data, size_t len, const void *dst);
 };
 
+// インタフェース構造体
 struct net_iface {
     struct net_iface *next;
     struct net_device *dev; /* back pointer to parent */

@@ -99,20 +99,74 @@ ip_dump(const uint8_t *data, size_t len)
     funlockfile(stderr);
 }
 
+// IPインタフェースのメモリを確保します。
 struct ip_iface *
 ip_iface_alloc(const char *unicast, const char *netmask)
 {
+    struct ip_iface *iface;
+    ip_addr_t u, n;
+
+    iface = memory_alloc(sizeof(*iface));
+    if (!iface) {
+        errorf("memory_alloc() failure");
+        return NULL;
+    }
+    NET_IFACE(iface)->family = NET_IFACE_FAMILY_IP;
+    // Exercise 7-3: IPインタフェースにアドレス情報を設定
+    // (1) iface->unicast
+    if (ip_addr_pton(unicast, &u) == -1) {
+        errorf("ip_addr_pton(unicast) failure");
+        memory_free(iface);
+    }
+    iface->unicast = u;
+    // (2) iface->netmask
+    if (ip_addr_pton(netmask, &n) == -1) {
+        errorf("ip_addr_pton(netmask) failure");
+        memory_free(iface);
+    }
+    iface->netmask = n;
+    // (3) iface->broadcast
+    iface->broadcast = (u & n) | ~n;
+    return iface;
 }
 
 /* NOTE: must not be call after net_run() */
+// IPインタフェースをネットワークデバイスとリストに登録します。
 int
 ip_iface_register(struct net_device *dev, struct ip_iface *iface)
 {
+    char addr1[IP_ADDR_STR_LEN];
+    char addr2[IP_ADDR_STR_LEN];
+    char addr3[IP_ADDR_STR_LEN];
+    // Exercise 7-4: IPインタフェースの登録
+    // (1) デバイスにIPインタフェース（iface）を登録する
+    if (net_device_add_iface(dev, NET_IFACE(iface)) == -1) {
+        errorf("net_device_add_iface() failure");
+        return -1;
+    }
+    // (2) IPインタフェースのリスト（ifaces）の先頭に iface を挿入する
+    iface->next = ifaces;
+    ifaces = iface;
+    infof("registered: dev=%s, unicast=%s, netmask=%s, broadcast=%s", dev->name,
+        ip_addr_ntop(iface->unicast, addr1, sizeof(addr1)),
+        ip_addr_ntop(iface->netmask, addr2, sizeof(addr2)),
+        ip_addr_ntop(iface->broadcast, addr3, sizeof(addr3)));
+    return 0;
 }
 
+// IPアドレスを持つIPインタフェースをリストから取得します。
 struct ip_iface *
 ip_iface_select(ip_addr_t addr)
 {
+    // Exercise 7-5: IPインタフェースの検索
+    struct ip_iface *entry;
+
+    for (entry = ifaces; entry; entry = entry->next) {
+        if (entry->unicast == addr) {
+            return entry;
+        }
+    }
+    return NULL;
 }
 
 // プロトコルの受信キューからデータを受領します。
@@ -122,7 +176,8 @@ ip_input(const uint8_t *data, size_t len, struct net_device *dev)
     struct ip_hdr *hdr;
     uint8_t v;
     uint16_t hlen, total, offset;
-    uint16_t sum;
+    struct ip_iface *iface;
+    char addr[IP_ADDR_STR_LEN];
 
     if (len < IP_HDR_SIZE_MIN) {
         errorf("too short");
@@ -142,8 +197,7 @@ ip_input(const uint8_t *data, size_t len, struct net_device *dev)
     //  (3) トータル長
     total = ntoh16(hdr->total);
     //  (4) チェックサム
-    sum = cksum16((uint16_t *)data, hlen, 0);
-    if (0x0000 != sum) {
+    if (0x0000 != cksum16((uint16_t *)data, hlen, 0)) {
         errorf("does not match checksum");
         return;
     }
@@ -153,7 +207,23 @@ ip_input(const uint8_t *data, size_t len, struct net_device *dev)
         errorf("fragments does not support");
         return;
     }
-    debugf("dev=%s, protocol=%u, total=%u", dev->name, hdr->protocol, total);
+    // Exercise 7-6: IPデータグラムのフィルタリング
+    // (1) デバイスに紐づくIPインタフェースを取得
+    iface = (struct ip_iface *)net_device_get_iface(dev, NET_IFACE_FAMILY_IP);
+    if (!iface) {
+        errorf("fragments does not support");
+        return;
+    }
+    // (2) 宛先IPアドレスの検証
+    if (hdr->dst != iface->unicast) {
+        if (hdr->dst != IP_ADDR_BROADCAST) {
+            if (hdr->dst != iface->broadcast) {
+                return;
+            }
+        }
+    }
+    debugf("dev=%s, iface=%s, protocol=%u, total=%u",
+        dev->name, ip_addr_ntop(iface->unicast, addr, sizeof(addr)), hdr->protocol, total);
     ip_dump(data, total);
 }
 

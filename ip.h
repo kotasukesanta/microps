@@ -19,9 +19,11 @@
 
 typedef uint32_t ip_addr_t;
 
+// IPインタフェース構造体
+// 先頭にインタフェース構造体があるため、インタフェース構造体として扱えます。
 struct ip_iface {
-    struct net_iface iface;
-    struct ip_iface *next;
+    struct net_iface iface;  // インタフェース構造体
+    struct ip_iface *next;   // 次のIPインタフェース構造体へのポインタ
     ip_addr_t unicast;
     ip_addr_t netmask;
     ip_addr_t broadcast;
