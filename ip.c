@@ -320,7 +320,7 @@ ip_output_core(struct ip_iface *iface, uint8_t protocol, const uint8_t *data, si
     hdr->dst = dst;
     hdr->sum = cksum16((uint16_t *)hdr, hlen, 0);
     // (2) IPヘッダの直後にデータを配置（コピー）する
-    memcpy(hdr + hlen, data, len);
+    memcpy(buf + hlen, data, len);
     debugf("dev=%s, dst=%s, protocol=%u, len=%u",
         NET_IFACE(iface)->dev->name, ip_addr_ntop(dst, addr, sizeof(addr)), protocol, total);
     ip_dump(buf, total);
