@@ -272,6 +272,7 @@ net_shutdown(void)
 }
 
 #include "ip.h"
+#include "icmp.h"
 
 // プロトコルスタックを初期化します。
 int
