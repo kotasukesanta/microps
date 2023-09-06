@@ -295,8 +295,8 @@ ip_output_device(struct ip_iface *iface, const uint8_t *data, size_t len, ip_add
             }
         }
     }
-    // xercise 8-4: デバイスから送信
-    return net_device_output(NET_IFACE(iface)->dev, NET_PROTOCOL_TYPE_IP, data, len, &dst);
+    // Exercise 8-4: デバイスから送信
+    return net_device_output(NET_IFACE(iface)->dev, NET_PROTOCOL_TYPE_IP, data, len, hwaddr);
 }
 
 // IPデータグラムを作成し、デバイスから送信します。

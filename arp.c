@@ -28,20 +28,20 @@
 
 // ARPヘッダ構造体
 struct arp_hdr {
-    uint16_t hrd;
-    uint16_t pro;
-    uint8_t hln;
-    uint8_t pln;
-    uint16_t op;
+    uint16_t hrd;  // ハードウェアアドレス種別
+    uint16_t pro;  // プロトコルアドレス種別
+    uint8_t hln;   // ハードウェアアドレス長
+    uint8_t pln;   // プロトコルアドレス長
+    uint16_t op;   // オペレーションコード
 };
 
 // ARPメッセージ構造体
 struct arp_ether_ip {
     struct arp_hdr hdr;
-    uint8_t sha[ETHER_ADDR_LEN];
-    uint8_t spa[IP_ADDR_LEN];
-    uint8_t tha[ETHER_ADDR_LEN];
-    uint8_t tpa[IP_ADDR_LEN];
+    uint8_t sha[ETHER_ADDR_LEN];  // 送信元ハードウェアアドレス
+    uint8_t spa[IP_ADDR_LEN];     // 送信元プロトコルアドレス
+    uint8_t tha[ETHER_ADDR_LEN];  // ターゲットハードウェアアドレス
+    uint8_t tpa[IP_ADDR_LEN];     // ターゲットプロトコルアドレス
 };
 
 // ARPキャッシュ構造体
@@ -75,6 +75,7 @@ arp_dump(const uint8_t *data, size_t len)
     char addr[128];
 
     message = (struct arp_ether_ip *)data;
+    flockfile(stderr);
     fprintf(stderr, "        hrd: 0x%04x\n", ntoh16(message->hdr.hrd));
     fprintf(stderr, "        pro: 0x%04x\n", ntoh16(message->hdr.pro));
     fprintf(stderr, "        hln: %u\n", message->hdr.hln);
@@ -163,6 +164,8 @@ arp_dump(const uint8_t *data, size_t len)
     }
     // (2) エントリの情報を更新する
     cache->state = ARP_CACHE_STATE_RESOLVED;
+    cache->pa = pa;
+    memcpy(cache->ha, ha, sizeof(cache->ha));
     gettimeofday(&cache->timestamp, NULL);
     
     debugf("UPDATE: pa=%s, ha=%s", ip_addr_ntop(cache->pa, addr1, sizeof(addr1)), ether_addr_ntop(cache->ha, addr2, sizeof(addr2)));
@@ -195,6 +198,23 @@ arp_dump(const uint8_t *data, size_t len)
 static int
 arp_request(struct net_iface *iface, ip_addr_t tpa)
 {
+    struct arp_ether_ip request;
+
+    // Exercise 15-2: ARP要求のメッセージを生成する
+    request.hdr.hrd = hton16(ARP_HRD_ETHER);
+    request.hdr.pro = hton16(ARP_PRO_IP);
+    request.hdr.hln = ETHER_ADDR_LEN;
+    request.hdr.pln = IP_ADDR_LEN;
+    request.hdr.op = hton16(ARP_OP_REQUEST);
+    memcpy(request.sha, iface->dev->addr, sizeof(request.sha));
+    memcpy(request.spa, &((struct ip_iface *)iface)->unicast, sizeof(request.spa));
+    memcpy(request.tha, ETHER_ADDR_BROADCAST, sizeof(request.tha));
+    memcpy(request.tpa, &tpa, sizeof(request.tpa));
+
+    debugf("dev=%s, len=%zu", iface->dev->name, sizeof(request));
+    arp_dump((uint8_t *)&request, sizeof(request));
+    // Exercise 15-3: デバイスの送信関数を呼び出してARP要求のメッセージを送信する
+    return iface->dev->ops->transmit(iface->dev, NET_PROTOCOL_TYPE_ARP, (uint8_t *)&request, sizeof(request), iface->dev->broadcast);
 }
 
 static int
@@ -258,7 +278,9 @@ arp_input(const uint8_t *data, size_t len, struct net_device *dev)
             mutex_unlock(&mutex);
         }
         // Exercise 13-2: ARP要求への応答
-        arp_reply(iface, msg->sha, spa, msg->sha);
+        if (ntoh16(msg->hdr.op) == ARP_OP_REQUEST) {
+            arp_reply(iface, msg->sha, spa, msg->sha);
+        }
     }
 }
 
@@ -281,8 +303,25 @@ arp_resolve(struct net_iface *iface, ip_addr_t pa, uint8_t *ha)
     cache = arp_cache_select(pa);
     if (!cache) {
         debugf("cache not found, pa=%s", ip_addr_ntop(pa, addr1, sizeof(addr1)));
+
+        // Exercise 15-1: ARPキャッシュに問い合わせ中のエントリを作成
+        // (1) 新しいエントリのスペースを確保
+        cache = arp_cache_alloc();
+        if (!cache) {
+            return ARP_RESOLVE_ERROR;
+        }
+        // (2) エントリの各フィールドに値を設定する
+        cache->state = ARP_CACHE_STATE_INCOMPLETE;
+        cache->pa = pa;
+        gettimeofday(&cache->timestamp, NULL);
         mutex_unlock(&mutex);
-        return ARP_RESOLVE_ERROR;
+        arp_request(iface, pa);
+        return ARP_RESOLVE_INCOMPLETE;
+    }
+    if (cache->state == ARP_CACHE_STATE_INCOMPLETE) {
+        mutex_unlock(&mutex);
+        arp_request(iface, pa); /* just in case packet loss */
+        return ARP_RESOLVE_INCOMPLETE;
     }
     memcpy(ha, cache->ha, ETHER_ADDR_LEN);
     mutex_unlock(&mutex);
