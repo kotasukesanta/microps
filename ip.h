@@ -18,7 +18,7 @@
 #define IP_ADDR_LEN 4
 #define IP_ADDR_STR_LEN 16 /* "ddd.ddd.ddd.ddd\0" */
 
-#define IP_ENDPOINT_STR_LEN (IP_ADDR_LEN + 6) /* xxx.xxx.xxx.xxx:yyyyy\n */
+#define IP_ENDPOINT_STR_LEN (IP_ADDR_STR_LEN + 6) /* xxx.xxx.xxx.xxx:yyyyy\n */
 
 /* see https://www.iana.org/assignments/protocol-numbers/protocol-numbers.txt */
 #define IP_PROTOCOL_ICMP  1
@@ -27,6 +27,7 @@
 
 typedef uint32_t ip_addr_t;
 
+// IPエンドポイント（IPアドレスとポート番号）構造体
 struct ip_endpoint {
     ip_addr_t addr;
     uint16_t port;
