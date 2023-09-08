@@ -109,7 +109,7 @@ icmp_input(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct
     case ICMP_TYPE_ECHO:
         /* Responds with the address of the received interface. */
         // Exercise 11-3: ICMPの出力関数を呼び出す
-        icmp_output(ICMP_TYPE_ECHOREPLY, hdr->code, hdr->values, data, len, iface->unicast, src);
+        icmp_output(ICMP_TYPE_ECHOREPLY, hdr->code, hdr->values, data + sizeof(*hdr), len - sizeof(*hdr), iface->unicast, src);
         break;
     default:
         /* ignore */

@@ -76,17 +76,34 @@ intr_raise_irq(unsigned int irq)
 static int
 intr_timer_setup(struct itimerspec *interval)
 {
+    timer_t id;
+
+    if (timer_create(CLOCK_REALTIME, NULL, &id) == -1) {
+        errorf("timer_create: %s", strerror(errno));
+        return -1;
+    }
+    if (timer_settime(id, 0, interval, NULL) == -1) {
+        errorf("timer_settime: %s", strerror(errno));
+        return -1;
+    }
+    return 0;
 }
 
 // 割り込み処理スレッドです。
 static void *
 intr_thread(void *arg)
 {
+    const struct timespec ts = {0, 1000000}; /* 1ms */
+    struct itimerspec interval = {ts, ts};
     int terminate = 0, sig, err;
     struct irq_entry *entry;
 
     debugf("start...");
     pthread_barrier_wait(&barrier);
+    if (intr_timer_setup(&interval) == -1) {
+        errorf("intr_timer_setup() failure");
+        return NULL;
+    }
     while (!terminate) {
         // シグナルを受信します。
         err = sigwait(&sigmask, &sig);
@@ -101,6 +118,9 @@ intr_thread(void *arg)
         case SIGUSR1:
             // ソフトウェア割り込みハンドラを呼び出します。
             net_softirq_handler();
+            break;
+        case SIGALRM:
+            net_timer_handler();
             break;
         default:
             // 割り込み要求リストを走査し、割り込み番号が一致する割り込み要求があれば
@@ -160,5 +180,6 @@ intr_init(void)
     sigemptyset(&sigmask);
     sigaddset(&sigmask, SIGHUP);
     sigaddset(&sigmask, SIGUSR1);
+    sigaddset(&sigmask, SIGALRM);
     return 0;
 }

@@ -334,14 +334,36 @@ arp_resolve(struct net_iface *iface, ip_addr_t pa, uint8_t *ha)
 static void
 arp_timer_handler(void)
 {
+    struct arp_cache *entry;
+    struct timeval now, diff;
+
+    mutex_lock(&mutex);
+    gettimeofday(&now, NULL);
+    for (entry = caches; entry < tailof(caches); entry++) {
+        if (entry->state != ARP_CACHE_STATE_FREE && entry->state != ARP_CACHE_STATE_STATIC) {
+            // Exercise 16-3: タイムアウトしたエントリの削除
+            timersub(&now, &entry->timestamp, &diff);
+            if (ARP_CACHE_TIMEOUT < diff.tv_sec) {
+                arp_cache_delete(entry);
+            }
+        }
+    }
+    mutex_unlock(&mutex);
 }
 
 int
 arp_init(void)
 {
+    struct timeval interval = {1, 0}; /* 1s */
+
     // Exercise 13-4: プロトコルスタックにARPを登録する
     if (net_protocol_register(NET_PROTOCOL_TYPE_ARP, arp_input) == -1) {
         errorf("net_protocol_register() failure");
+        return -1;
+    }
+    // Exercise 16-4: ARPのタイマーハンドラを登録
+    if (net_timer_register(interval, arp_timer_handler) == -1) {
+        errorf("net_timer_register() failure");
         return -1;
     }
     return 0;
