@@ -63,6 +63,10 @@ setup(void)
         errorf("ip_iface_register() failure");
         return -1;
     }
+    if (ip_route_set_default_gateway(iface, DEFAULT_GATEWAY) == -1) {
+        errorf("ip_route_set_default_gateway() failure");
+        return -1;
+    }
     // プロトコルスタックを起動します。
     if (net_run() == -1) {
         errorf("net_run() failure");
@@ -80,14 +84,26 @@ cleanup(void)
 int
 main(int argc, char *argv[])
 {
+    ip_addr_t src, dst;
+    uint16_t id, seq = 0;
+    size_t offset = IP_HDR_SIZE_MIN + ICMP_HDR_SIZE;
+
     // シグナルハンドラを設定します。
     signal(SIGINT, on_signal);
     if (setup() == -1) {
         errorf("setup() failure");
         return -1;
     }
+    ip_addr_pton("192.0.2.2", &src);
+    src = IP_ADDR_ANY;
+    ip_addr_pton("8.8.8.8", &dst);
+    id = getpid() % UINT16_MAX;
     // キーボードからの割り込みシグナルを受信するまで繰り返します。
     while (!terminate) {
+        if (icmp_output(ICMP_TYPE_ECHO, 0, hton32(id << 16 | ++seq), test_data + offset, sizeof(test_data) - offset, src, dst) == -1) {
+            errorf("icmp_output() failure");
+            break;
+        }
         // 1秒スリープします。
         sleep(1);
     }
