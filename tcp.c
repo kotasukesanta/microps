@@ -240,7 +240,7 @@ tcp_output_segment(uint32_t seq, uint32_t ack, uint8_t flg, uint16_t wnd, uint8_
     hdr->dst = foreign->port;
     hdr->seq = hton32(seq);
     hdr->ack = hton32(ack);
-    hdr->off = 0;
+    hdr->off = (sizeof(*hdr) >> 2) << 4;
     hdr->flg = flg;
     hdr->wnd = hton16(wnd);
     hdr->sum = hton16(0x0000);
