@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <errno.h>
 
 #include "platform.h"
 
@@ -247,6 +248,11 @@ udp_output(struct ip_endpoint *src, struct ip_endpoint *dst, const uint8_t *data
     // Exercise 18-2: IPの送信関数を呼び出す
     ip_output(pseudo.protocol, (uint8_t *)hdr, sizeof(*hdr) + len, src->addr, dst->addr);
     return len;
+}
+
+static void
+event_handler(void *arg)
+{
 }
 
 int
