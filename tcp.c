@@ -37,6 +37,9 @@
 #define TCP_PCB_STATE_CLOSE_WAIT  10
 #define TCP_PCB_STATE_LAST_ACK    11
 
+#define TCP_DEFAULT_RTO 200000 /* micro seconds */
+#define TCP_RETRANSMIT_DEADLINE 12 /* seconds */
+
 // 疑似ヘッダ構造体
 struct pseudo_hdr {
     uint32_t src;      // Source Address
@@ -91,6 +94,17 @@ struct tcp_pcb {
     uint16_t mss;
     uint8_t buf[65535]; /* receive buffer */
     struct sched_ctx ctx;
+    struct queue_head queue; /* retransmit queue */
+};
+
+struct tcp_queue_entry {
+    struct timeval first;
+    struct timeval last;
+    unsigned int rto; /* micro seconds */
+    uint32_t seq;
+    uint8_t flg;
+    size_t len;
+    uint8_t data[];
 };
 
 static mutex_t mutex = MUTEX_INITIALIZER;
@@ -259,6 +273,27 @@ tcp_output_segment(uint32_t seq, uint32_t ack, uint8_t flg, uint16_t wnd, uint8_
     ip_output(pseudo.protocol, (uint8_t *)hdr, sizeof(*hdr) + len, local->addr, foreign->addr);
 
     return len;
+}
+
+/*
+ * TCP Retransmit
+ *
+ * NOTE: TCP Retransmit functions must be called after mutex locked
+ */
+
+static int
+tcp_retransmit_queue_add(struct tcp_pcb *pcb, uint32_t seq, uint8_t flg, uint8_t *data, size_t len)
+{
+}
+
+static void
+tcp_retransmit_queue_cleanup(struct tcp_pcb *pcb)
+{
+}
+
+static void
+tcp_retransmit_queue_emit(void *arg, void *data)
+{
 }
 
 static ssize_t
@@ -543,6 +578,11 @@ tcp_input(const uint8_t *data, size_t len, ip_addr_t src, ip_addr_t dst, struct 
     tcp_segment_arrives(&seg, hdr->flg, (uint8_t *)hdr + hlen, len - hlen, &local, &foreign);
     mutex_unlock(&mutex);
     return;
+}
+
+static void
+tcp_timer(void)
+{
 }
 
 static void
