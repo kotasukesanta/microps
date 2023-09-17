@@ -119,6 +119,9 @@ intr_thread(void *arg)
             // ソフトウェア割り込みハンドラを呼び出します。
             net_softirq_handler();
             break;
+        case SIGUSR2:
+            net_event_handler();
+            break;
         case SIGALRM:
             net_timer_handler();
             break;
@@ -180,6 +183,7 @@ intr_init(void)
     sigemptyset(&sigmask);
     sigaddset(&sigmask, SIGHUP);
     sigaddset(&sigmask, SIGUSR1);
+    sigaddset(&sigmask, SIGUSR2);
     sigaddset(&sigmask, SIGALRM);
     return 0;
 }
