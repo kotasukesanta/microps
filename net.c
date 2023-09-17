@@ -9,6 +9,7 @@
 #include "util.h"
 #include "net.h"
 #include "udp.h"
+#include "tcp.h"
 
 // プロトコル構造体
 struct net_protocol {
@@ -393,6 +394,11 @@ net_init(void)
     // Exercise 18-4: UDPの初期化関数を呼び出す
     if (udp_init() == -1) {
         errorf("udp_init() failure");
+        return -1;
+    }
+    // Exercise 22-2: TCPの初期化関数を呼び出す
+    if (tcp_init() == -1) {
+        errorf("tcp_init() failure");
         return -1;
     }
     infof("initialized");
